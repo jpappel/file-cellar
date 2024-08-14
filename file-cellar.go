@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"file-cellar/db"
-	storageDrivers "file-cellar/drivers"
+	storageDrivers "file-cellar/storage"
 	"log"
 	// "net/http"
 )
@@ -23,7 +23,7 @@ func main() {
 
 	ctx := context.Background()
 
-	drivers := make(map[string]*storageDrivers.Driver)
+	drivers := make(map[string]storageDrivers.Driver)
 	drivers["local"] = nil
 	drivers["network"] = nil
 

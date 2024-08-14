@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 	"database/sql"
-	"file-cellar/drivers"
 	"file-cellar/shared"
+	"file-cellar/storage"
 	"time"
 )
 
@@ -56,8 +56,8 @@ func GetFile(db *sql.DB, ctx context.Context, uri string) (shared.File, error) {
 	return f, nil
 }
 
-func GetBins(db *sql.DB, ctx context.Context, drivers map[string]*drivers.Driver) (map[int]shared.Bin, error) {
-	bins := make(map[int]shared.Bin)
+func GetBins(db *sql.DB, ctx context.Context, drivers map[string]storage.Driver) (map[int]storage.Bin, error) {
+	bins := make(map[int]storage.Bin)
 	rows, err := db.QueryContext(ctx,
 		`SELECT bins.id, bins.name, url, drivers.name
     FROM bins
@@ -71,7 +71,7 @@ func GetBins(db *sql.DB, ctx context.Context, drivers map[string]*drivers.Driver
 	for rows.Next() {
 		var id int
 		var driverName string
-		var bin shared.Bin
+		var bin storage.Bin
 		rows.Scan(&id, &bin.Name, &bin.Url, &driverName)
 
 		driver, ok := drivers[driverName]

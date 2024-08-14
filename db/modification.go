@@ -6,12 +6,13 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"file-cellar/shared"
+	"file-cellar/storage"
 	"fmt"
 	"strings"
 )
 
 // Creates a bin and returns its index
-func CreateBin(db *sql.DB, ctx context.Context, bin shared.Bin) (int64, error) {
+func CreateBin(db *sql.DB, ctx context.Context, bin storage.Bin) (int64, error) {
 	result, err := db.ExecContext(ctx,
 		`INSERT INTO bins (driverID, name, url)
         VALUES (?,?,?)`, nil, bin.Name, bin.Url) // FIXME: use driver id
