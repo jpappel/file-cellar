@@ -11,8 +11,33 @@ import (
 	"strings"
 )
 
-// Creates a bin and returns its index
-func CreateBin(db *sql.DB, ctx context.Context, bin storage.Bin) (int64, error) {
+// registers a storage driver
+func AddDriver(db *sql.DB, ctx context.Context, driverName string) bool {
+	row := db.QueryRowContext(ctx, `
+    SELECT name FROM drivers
+    WHERE name=?
+    `, driverName)
+
+	var name string
+	err := row.Scan(&name)
+	if err != nil || driverName == name {
+		return false
+	}
+
+	_, err = db.ExecContext(ctx, `
+    INSERT INTO drivers (name)
+    VALUES (?)
+    `, driverName)
+
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// adds a storage bin to the database and returns its index
+func AddBin(db *sql.DB, ctx context.Context, bin storage.Bin) (int64, error) {
 	result, err := db.ExecContext(ctx,
 		`INSERT INTO bins (driverID, name, url)
         VALUES (?,?,?)`, nil, bin.Name, bin.Url) // FIXME: use driver id
@@ -24,7 +49,7 @@ func CreateBin(db *sql.DB, ctx context.Context, bin storage.Bin) (int64, error) 
 }
 
 // Assigns a relative path to a file
-func CreateFile(db *sql.DB, ctx context.Context, f *shared.File) error {
+func AddFile(db *sql.DB, ctx context.Context, f *shared.File) error {
 	unixTime := f.UploadTimestamp.Unix()
 
 	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%s%d", f.Name, f.Hash, unixTime)))
@@ -32,9 +57,9 @@ func CreateFile(db *sql.DB, ctx context.Context, f *shared.File) error {
 	f.RelPath = strings.Trim(encoding, "=")
 
 	_, err := db.ExecContext(ctx,
-		`INSERT INTO files (binID, name, hash, relPath, uploadTimestamp)
-    VALUES (?,?,?,?,?)`,
-		f.BinId, f.Name, f.Hash, f.RelPath, unixTime)
+		`INSERT INTO files (binID, name, hash, size, relPath, uploadTimestamp)
+    VALUES (?,?,?,?,?,?)`,
+		f.BinId, f.Name, f.Hash, f.Size, f.RelPath, unixTime)
 
 	if err != nil {
 		logger.Print(err)

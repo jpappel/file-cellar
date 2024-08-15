@@ -97,7 +97,6 @@ func InitTables(db *sql.DB) error {
 		return err
 	}
 
-	// TODO: rename bins to something more semantic
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS bins (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		driverID INTEGER,
@@ -114,6 +113,7 @@ func InitTables(db *sql.DB) error {
 		binID INTEGER,
 		name TEXT NOT NULL,
 		hash TEXT NOT NULL,
+        size INTEGER NOT NULL,
 		relPath TEXT UNIQUE NOT NULL,
 		uploadTimestamp INTEGER,
 		FOREIGN KEY(binID) REFERENCES bins(id)
@@ -138,14 +138,36 @@ func InitTables(db *sql.DB) error {
 
 func ExampleData(db *sql.DB) error {
 	_, err := db.Exec(`
-    INSERT INTO files (binID, name, hash, relPath, uploadTimestamp)
+    INSERT INTO drivers(name)
     VALUES
-    (1, 'childhood video' , 'af8182a217f6c4ae4abb6d52951f6e7a2cac3a4d59889e4a7a3cce87ac0ae508' , 'oldvid.mp4' , 1000209017),
-    (1, 'marriage photo', 'a0856e75fc1f1ec0d2fed17d534fbc1756770dbb0cc83788cbf8ca861c885fc0', 'WeddingAltar5.jpg', 451309817),
-    (3, 'I saw the tv glow', '7b1a56dfcba8ce808cb6392e2403f895afb1f210b85b7d3ad324d365432f01fa', 'I_Saw_The_TV_Glow_2024.mp4', 1718538617),
-    (2, 'dota2', '15c11ed3bd0eb92d6d54de44b36131643268e28f4aac9229f83231a0670c290c', 'Dota2Beta', 1373370617)
+    ('local'),
+    ('network')
     `)
-    return err
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+    INSERT INTO bins(driverID, name, url)
+    VALUES
+    (1, 'slow hard drive', '/mount/slowhdd'),
+    (1, 'fast ssd', '/mount/zyoom'),
+    (2, 'home NAS', 'https://myhomenas.local')
+    `)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+    INSERT INTO files (binID, name, hash, size, relPath, uploadTimestamp)
+    VALUES
+    (1, 'childhood video' , 'af8182a217f6c4ae4abb6d52951f6e7a2cac3a4d59889e4a7a3cce87ac0ae508', 6e8, 'oldvid.mp4' , 1000209017),
+    (1, 'marriage photo', 'a0856e75fc1f1ec0d2fed17d534fbc1756770dbb0cc83788cbf8ca861c885fc0', 3.072e4, 'WeddingAltar5.jpg', 451309817),
+    (3, 'I saw the tv glow', '7b1a56dfcba8ce808cb6392e2403f895afb1f210b85b7d3ad324d365432f01fa', 1.9e9 ,'I_Saw_The_TV_Glow_2024.mp4', 1718538617),
+    (2, 'dota2', '15c11ed3bd0eb92d6d54de44b36131643268e28f4aac9229f83231a0670c290c', 55e9, 'Dota2Beta', 1373370617)
+    `)
+	return err
 }
 
 // func SetServerTable(db *sql.DB, params map[string]string) error

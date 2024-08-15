@@ -32,15 +32,15 @@ func ResolveURI(db *sql.DB, ctx context.Context, uri string) (string, error) {
 }
 
 func GetFile(db *sql.DB, ctx context.Context, uri string) (shared.File, error) {
-	row := db.QueryRowContext(ctx,
-		`SELECT name, hash, uploadTimestamp, binID
+	row := db.QueryRowContext(ctx, `
+    SELECT name, hash, size, uploadTimestamp, binID
 	FROM files
 	WHERE relPath=?
 	`, uri)
 
 	f := shared.File{RelPath: uri}
 	var epochTime int64
-	err := row.Scan(&f.Name, &f.Hash, &epochTime, &f.BinId)
+	err := row.Scan(&f.Name, &f.Hash, &f.Size, &epochTime, &f.BinId)
 
 	switch {
 	case err == sql.ErrNoRows:
