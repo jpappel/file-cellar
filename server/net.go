@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ func determineFT(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "Detected filetype: %s\n", http.DetectContentType(buf[:n]))
 }
 
-func upload(w http.ResponseWriter, r *http.Request) {
+func _upload(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10e6)
 	if err != nil {
 		http.Error(w, "Error Parsing Form", 400)
@@ -88,4 +88,8 @@ func initMux(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ping", ping)
 	mux.HandleFunc("POST /ft", determineFT)
 	mux.HandleFunc("POST /upload", upload)
+}
+
+func upload(w http.ResponseWriter, r *http.Request) {
+
 }

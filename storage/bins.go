@@ -17,12 +17,24 @@ type Bin struct {
 }
 
 func (b *Bin) Get(id shared.FileIdentifier) (io.ReadCloser, error) {
-	return b.Driver.Get(id, b.Url)
+    rc, err := b.Driver.Get(b.Url, id)
+    if err != nil {
+        b.stats.Failed++
+    } else {
+        b.stats.Downloaded++
+    }
+	return rc, err
 }
 
 // TODO: implement
 func (b Bin) Upload(f *shared.UploadFile) error {
-	return nil
+    err := b.Driver.Upload(b.Url, f)
+    if err != nil {
+        b.stats.Failed++
+    } else {
+        b.stats.Uploaded++
+    }
+	return err
 }
 
 // TODO: implement
@@ -40,5 +52,5 @@ func (b Bin) Stats() Stats {
 }
 
 func (b Bin) String() string {
-	return fmt.Sprintf("Bin %s [%v]:%s", b.Name, b.Url, b.Driver)
+	return fmt.Sprintf("Bin %s [%v]:%s", b.Name, b.Driver, b.Url)
 }

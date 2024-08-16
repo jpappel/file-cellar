@@ -21,11 +21,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err = db.ExampleData(pool)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ctx := context.Background()
 
 	drivers := make(map[string]storageDrivers.Driver)
 	drivers["local"] = nil
-	drivers["network"] = nil
 
 	bins, err := db.GetBins(pool, ctx, drivers)
 	if err != nil {
@@ -33,23 +37,18 @@ func main() {
 	}
 	log.Printf("bins: %v\n", bins)
 
-	f, err := db.GetFile(pool, ctx, "oldvid.mp4")
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("file: \n%v\n", f)
+	// f, err := db.GetFile(pool, ctx, "oldvid.mp4")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Printf("file: %v\n", f)
 
-	uri := "I_Saw_The_TV_Glow_2024.mp4"
-	url, err := db.ResolveURI(pool, ctx, uri)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Expanded %s to %s\n", uri, url)
-
-    ok, err := db.RemoveFile(pool, ctx, "p8oAisdOmJyRyOkHERzYJI2RFnrrlI8qBUM4uWn-kY0")
-    if !ok || err != nil {
-        log.Println("Error removing goose pic")
-    }
+	// uri := "I_Saw_The_TV_Glow_2024.mp4"
+	// url, err := db.ResolveURI(pool, ctx, uri)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Printf("Expanded %s to %s\n", uri, url)
 
 	// newFile := shared.File{
 	// 	BinId:           1,
@@ -58,10 +57,10 @@ func main() {
 	// 	UploadTimestamp: time.Now().In(time.UTC),
 	// }
 	//
- //    db.CreateFile(pool, ctx, &newFile)
- //    if err != nil {
- //        log.Fatal(err)
- //    }
+	//    db.CreateFile(pool, ctx, &newFile)
+	//    if err != nil {
+	//        log.Fatal(err)
+	//    }
 
 	// const PORT uint = 8080
 	// mux := GetMux()
