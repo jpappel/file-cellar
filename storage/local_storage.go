@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"file-cellar/shared"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +15,9 @@ type LocalDriver struct {
 }
 
 func NewLocalDriver() *LocalDriver {
-	return new(LocalDriver)
+    d := new(LocalDriver)
+    d.knownRoots = make(map[string]bool)
+	return d
 }
 
 // Create a local directory and return its absolute path
@@ -48,7 +49,7 @@ func (d *LocalDriver) addRoot(root string) {
 	d.knownRoots[root] = true
 }
 
-func (d *LocalDriver) Get(baseUrl string, id shared.FileIdentifier) (io.ReadCloser, error) {
+func (d *LocalDriver) Get(baseUrl string, id FileIdentifier) (io.ReadCloser, error) {
 	path := filepath.Join(baseUrl, string(id))
 	f, err := os.Open(path)
 	if err != nil {
@@ -61,7 +62,7 @@ func (d *LocalDriver) Get(baseUrl string, id shared.FileIdentifier) (io.ReadClos
 	return f, err
 }
 
-func (d *LocalDriver) Upload(baseUrl string, f *shared.UploadFile) error {
+func (d *LocalDriver) Upload(baseUrl string, f *UploadFile) error {
 	ok, err := d.rootKnown(baseUrl)
 	if !ok {
 		d.stats.Failed++
@@ -101,7 +102,7 @@ func (d *LocalDriver) Upload(baseUrl string, f *shared.UploadFile) error {
 	return nil
 }
 
-func (d *LocalDriver) Delete(baseUrl string, id shared.FileIdentifier) error {
+func (d *LocalDriver) Delete(baseUrl string, id FileIdentifier) error {
 	ok, err := d.rootKnown(baseUrl)
 	if !ok {
 		d.stats.Failed++
@@ -118,27 +119,27 @@ func (d *LocalDriver) Delete(baseUrl string, id shared.FileIdentifier) error {
 	return err
 }
 
-func (d *LocalDriver) Status(baseUrl string, id shared.FileIdentifier) (shared.FileStatus, error) {
+func (d *LocalDriver) Status(baseUrl string, id FileIdentifier) (FileStatus, error) {
 	ok, err := d.rootKnown(baseUrl)
 	if !ok {
-		return shared.FileUnknownError, err
+		return FileUnknownError, err
 	}
 
 	info, err := os.Stat(filepath.Join(baseUrl, string(id)))
 	if err != nil {
 		log.Printf("Driver: %s: failed to get status: %v\n", id, err)
-		return shared.FileUnreadable, err
+		return FileUnreadable, err
 	}
 
 	mode := info.Mode()
 	if !mode.IsRegular() {
-		return shared.FileUnreadable, errors.New("incorrect file mode, expected regular file")
+		return FileUnreadable, errors.New("incorrect file mode, expected regular file")
 	}
 	if mode&0444 == 0 {
-		return shared.FileUnknownError, errors.New("incorrect file permissions, expected read access")
+		return FileUnknownError, errors.New("incorrect file permissions, expected read access")
 	}
 
-	return shared.FileOk, nil
+	return FileOk, nil
 }
 
 func (d *LocalDriver) Stats() Stats {
@@ -147,4 +148,8 @@ func (d *LocalDriver) Stats() Stats {
 
 func (d *LocalDriver) String() string {
 	return fmt.Sprintf("LocalDriver:%v", d.knownRoots)
+}
+
+func init() {
+    registeredDrivers = append(registeredDrivers, &LocalDriver{})
 }

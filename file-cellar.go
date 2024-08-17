@@ -1,11 +1,8 @@
 package main
 
 import (
-	"context"
 	"file-cellar/db"
-	storageDrivers "file-cellar/storage"
 	"log"
-	// "net/http"
 )
 
 func main() {
@@ -25,17 +22,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	ctx := context.Background()
-
-	drivers := make(map[string]storageDrivers.Driver)
-	drivers["local"] = nil
-
-	bins, err := db.GetBins(pool, ctx, drivers)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("bins: %v\n", bins)
 
 	// f, err := db.GetFile(pool, ctx, "oldvid.mp4")
 	// if err != nil {

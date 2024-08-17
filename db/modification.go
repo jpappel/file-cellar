@@ -5,31 +5,20 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"file-cellar/shared"
 	"file-cellar/storage"
 	"fmt"
 	"strings"
 )
 
 // registers a storage driver
-func AddDriver(db *sql.DB, ctx context.Context, driverName string) bool {
-	row := db.QueryRowContext(ctx, `
-    SELECT name FROM drivers
-    WHERE name=?
-    `, driverName)
-
-	var name string
-	err := row.Scan(&name)
-	if err != nil || driverName == name {
-		return false
-	}
-
-	_, err = db.ExecContext(ctx, `
+func AddDriver(ctx context.Context, db *sql.DB, driverName string) bool {
+	_, err := db.ExecContext(ctx, `
     INSERT INTO drivers (name)
     VALUES (?)
     `, driverName)
 
 	if err != nil {
+		logger.Print(err)
 		return false
 	}
 
@@ -37,10 +26,11 @@ func AddDriver(db *sql.DB, ctx context.Context, driverName string) bool {
 }
 
 // adds a storage bin to the database and returns its index
-func AddBin(db *sql.DB, ctx context.Context, bin storage.Bin) (int64, error) {
+func AddBin(ctx context.Context, db *sql.DB, bin storage.Bin, driverID int64) (int64, error) {
 	result, err := db.ExecContext(ctx,
-		`INSERT INTO bins (driverID, name, url)
-        VALUES (?,?,?)`, nil, bin.Name, bin.Url) // FIXME: use driver id
+		`INSERT INTO bins (driverID, name, externalURL, internalURL, redirect)
+        VALUES (?,?,?,?,?)`,
+		driverID, bin.Name, bin.Path.External, bin.Path.Internal, bin.Redirect)
 	if err != nil {
 		logger.Print(err)
 	}
@@ -49,17 +39,17 @@ func AddBin(db *sql.DB, ctx context.Context, bin storage.Bin) (int64, error) {
 }
 
 // Assigns a relative path to a file
-func AddFile(db *sql.DB, ctx context.Context, f *shared.File) error {
+func AddFile(ctx context.Context, db *sql.DB, f *storage.File) error {
 	unixTime := f.UploadTimestamp.Unix()
 
 	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%s%d", f.Name, f.Hash, unixTime)))
 	encoding := base64.URLEncoding.EncodeToString(hash[:])
 	f.RelPath = strings.Trim(encoding, "=")
 
-	_, err := db.ExecContext(ctx,
-		`INSERT INTO files (binID, name, hash, size, relPath, uploadTimestamp)
+	_, err := db.ExecContext(ctx, `
+    INSERT INTO files (binID, name, hash, size, relPath, uploadTimestamp)
     VALUES (?,?,?,?,?,?)`,
-		f.BinId, f.Name, f.Hash, f.Size, f.RelPath, unixTime)
+		f.Bin.Id, f.Name, f.Hash, f.Size, f.RelPath, unixTime)
 
 	if err != nil {
 		logger.Print(err)

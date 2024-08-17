@@ -91,5 +91,7 @@ func initMux(mux *http.ServeMux) {
 }
 
 func upload(w http.ResponseWriter, r *http.Request) {
-
+	// TODO: request validation
+        // TODO: check for file
+        // TODO: lookup bin
 }
