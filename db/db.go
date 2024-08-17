@@ -43,6 +43,7 @@ func setPragmas(db *sql.DB, pragmas map[string]string) error {
 func getPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
 	dbPool, ok := dbPools[connStr]
 	if ok {
+		dbPool.Alive++
 		return dbPool.db, nil
 	}
 
@@ -71,9 +72,11 @@ func closePool(connStr string) (bool, error) {
 		return false, nil
 	}
 
-	dbPool.Alive--
-	if dbPool.Alive != 0 {
-		return false, nil
+	if connStr != ":memory" {
+		dbPool.Alive--
+		if dbPool.Alive != 0 {
+			return false, nil
+		}
 	}
 
 	err := dbPool.db.Close()
@@ -90,15 +93,17 @@ func closePool(connStr string) (bool, error) {
 //
 // error is non nil if an error occurs while executing any SQL statement
 func InitTables(db *sql.DB) error {
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS serverConfig (
-		key TEXT UNIQUE NOT NULL,
-		value TEXT
+	_, err := db.Exec(`
+        CREATE TABLE IF NOT EXISTS serverConfig (
+        key TEXT UNIQUE NOT NULL,
+        value TEXT
 	)`)
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS drivers(
+	_, err = db.Exec(`
+        CREATE TABLE IF NOT EXISTS drivers(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT UNIQUE NOT NULL
 	)`)
@@ -106,29 +111,31 @@ func InitTables(db *sql.DB) error {
 		return err
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS bins (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		driverID INTEGER,
-		name TEXT UNIQUE NOT NULL,
-		externalURL TEXT UNIQUE NOT NULL,
-		internalURL TEXT NOT NULL,
-		redirect INTEGER NOT NULL CHECK(proxy IN (0, 1)),
-		FOREIGN KEY(driverID) REFERENCES drivers(id)
-	)`)
+	_, err = db.Exec(`
+    CREATE TABLE IF NOT EXISTS bins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driverID INTEGER,
+    name TEXT UNIQUE NOT NULL,
+    externalURL TEXT UNIQUE NOT NULL,
+    internalURL TEXT NOT NULL,
+    redirect INTEGER NOT NULL CHECK(redirect IN (0, 1)),
+    FOREIGN KEY(driverID) REFERENCES drivers(id)
+    )`)
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS files (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		binID INTEGER,
-		name TEXT NOT NULL,
-		hash TEXT NOT NULL,
-		size INTEGER NOT NULL,
-		relPath TEXT UNIQUE NOT NULL,
-		uploadTimestamp INTEGER,
-		FOREIGN KEY(binID) REFERENCES bins(id)
-	)`)
+	_, err = db.Exec(`
+    CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    binID INTEGER,
+    name TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    relPath TEXT UNIQUE NOT NULL,
+    uploadTimestamp INTEGER,
+    FOREIGN KEY(binID) REFERENCES bins(id)
+    )`)
 	if err != nil {
 		return err
 	}
@@ -145,41 +152,6 @@ func InitTables(db *sql.DB) error {
 
 	logger.Println("Initialized Tables")
 	return nil
-}
-
-func ExampleData(db *sql.DB) error {
-	// FIXME: make correct with database schema
-	_, err := db.Exec(`
-	INSERT INTO drivers(name)
-	VALUES
-	('local'),
-	('network')
-	`)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(`
-	INSERT INTO bins(driverID, name, url)
-	VALUES
-	(1, 'slow hard drive', '/mount/slowhdd'),
-	(1, 'fast ssd', '/mount/zyoom'),
-	(2, 'home NAS', 'https://myhomenas.local')
-	`)
-
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(`
-	INSERT INTO files (binID, name, hash, size, relPath, uploadTimestamp)
-	VALUES
-	(1, 'childhood video' , 'af8182a217f6c4ae4abb6d52951f6e7a2cac3a4d59889e4a7a3cce87ac0ae508', 6e8, 'oldvid.mp4' , 1000209017),
-	(1, 'marriage photo', 'a0856e75fc1f1ec0d2fed17d534fbc1756770dbb0cc83788cbf8ca861c885fc0', 3.072e4, 'WeddingAltar5.jpg', 451309817),
-	(3, 'I saw the tv glow', '7b1a56dfcba8ce808cb6392e2403f895afb1f210b85b7d3ad324d365432f01fa', 1.9e9 ,'I_Saw_The_TV_Glow_2024.mp4', 1718538617),
-	(2, 'dota2', '15c11ed3bd0eb92d6d54de44b36131643268e28f4aac9229f83231a0670c290c', 55e9, 'Dota2Beta', 1373370617)
-	`)
-	return err
 }
 
 func init() {
