@@ -12,11 +12,14 @@ import (
 type LocalDriver struct {
 	knownRoots map[string]bool
 	stats      Stats
+	BaseDriver
 }
 
 func NewLocalDriver() *LocalDriver {
-    d := new(LocalDriver)
-    d.knownRoots = make(map[string]bool)
+	d := new(LocalDriver)
+	d.name = "LocalDriver"
+	d.id = -1
+	d.knownRoots = make(map[string]bool)
 	return d
 }
 
@@ -147,9 +150,9 @@ func (d *LocalDriver) Stats() Stats {
 }
 
 func (d *LocalDriver) String() string {
-	return fmt.Sprintf("LocalDriver:%v", d.knownRoots)
+	return fmt.Sprintf("%s:%v", d.name, d.knownRoots)
 }
 
 func init() {
-    registeredDrivers = append(registeredDrivers, &LocalDriver{})
+	registeredDrivers = append(registeredDrivers, &LocalDriver{})
 }

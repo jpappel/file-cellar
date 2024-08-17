@@ -8,28 +8,22 @@ import (
 	"time"
 )
 
-type DBCache struct {
-	Bins    map[string]*storage.Bin
-	Drivers map[string]storage.Driver
-}
-
-// Gets the full uri for a file given the file uri
-// FIXME: doesn't resolve using Internal and External
-func ResolveURI(ctx context.Context, db *sql.DB, uri string) (string, error) {
-	row := db.QueryRowContext(ctx,
-		`SELECT concat(url, '/' ,relPath)
+// Gets the full url for a file given the file path
+func (m *Manager) Resolve(ctx context.Context, path string) (string, error) {
+	row := m.db.QueryRowContext(ctx, `
+    SELECT concat(internalURL, '/' ,relPath)
     FROM files
     INNER JOIN bins
     ON files.binID = bins.id
-    WHERE relPath=?`, uri)
+    WHERE relPath=?`, path)
 
 	url := ""
 	err := row.Err()
 	switch {
 	case err == sql.ErrNoRows:
-		logger.Printf("no file with uri%s\n", uri)
+		logger.Printf("no file with uri%s\n", path)
 	case err != nil:
-		logger.Printf("failure when querying for file %s\n%v", uri, err)
+		logger.Printf("failure when querying for file %s\n%v", path, err)
 	default:
 		row.Scan(&url)
 	}
@@ -37,8 +31,8 @@ func ResolveURI(ctx context.Context, db *sql.DB, uri string) (string, error) {
 	return url, err
 }
 
-func GetFile(ctx context.Context, db *sql.DB, cache *DBCache, uri string) (*storage.File, error) {
-	row := db.QueryRowContext(ctx, `
+func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error) {
+	row := m.db.QueryRowContext(ctx, `
     SELECT files.name, files.hash, files.size, files.uploadTimestamp, bins.name
 	FROM files
     INNER JOIN bins ON files.binID=bins.id
@@ -63,9 +57,9 @@ func GetFile(ctx context.Context, db *sql.DB, cache *DBCache, uri string) (*stor
 		f.UploadTimestamp = time.Unix(epochTime, 0)
 	}
 
-	bin, ok := cache.Bins[binName]
+	bin, ok := m.Bins[binName]
 	if !ok {
-		bin, err = GetBin(ctx, db, cache, binName)
+		bin, err = m.GetBin(ctx, binName)
 		if err != nil {
 			return nil, err
 		}
@@ -75,15 +69,15 @@ func GetFile(ctx context.Context, db *sql.DB, cache *DBCache, uri string) (*stor
 	return f, nil
 }
 
-func GetBin(ctx context.Context, db *sql.DB, cache *DBCache, binName string) (*storage.Bin, error) {
-	bin, ok := cache.Bins[binName]
+func (m *Manager) GetBin(ctx context.Context, binName string) (*storage.Bin, error) {
+	bin, ok := m.Bins[binName]
 	if ok {
 		return bin, nil
 	} else {
 		bin = new(storage.Bin)
 	}
 
-	row := db.QueryRowContext(ctx, `
+	row := m.db.QueryRowContext(ctx, `
     SELECT bins.id, bins.name, bins.externalURL, bins.internalURL, bins.redirect, drivers.name
     FROM bins
     INNER JOIN drivers ON bins.driverID=drivers.id
@@ -95,20 +89,20 @@ func GetBin(ctx context.Context, db *sql.DB, cache *DBCache, binName string) (*s
 		return nil, err
 	}
 
-	driver, ok := cache.Drivers[driverName]
+	driver, ok := m.Drivers[driverName]
 	if !ok {
 		return nil, errors.New("can't find driver")
 	}
 
 	bin.Driver = driver
-	cache.Bins[binName] = bin
+	m.Bins[binName] = bin
 
 	return bin, nil
 }
 
-func GetBins(ctx context.Context, db *sql.DB, cache *DBCache) error {
-	cache.Bins = make(map[string]*storage.Bin)
-	rows, err := db.QueryContext(ctx, `
+func (m *Manager) GetBins(ctx context.Context) error {
+	m.Bins = make(map[string]*storage.Bin)
+	rows, err := m.db.QueryContext(ctx, `
     SELECT bins.id, bins.name, bins.internalURL, bins.externalURL, bins.redirect, drivers.name
     FROM bins
     INNER JOIN drivers ON bins.driverID = drivers.id`)
@@ -128,14 +122,14 @@ func GetBins(ctx context.Context, db *sql.DB, cache *DBCache) error {
 			continue
 		}
 
-		driver, ok := cache.Drivers[driverName]
+		driver, ok := m.Drivers[driverName]
 		if !ok {
 			logger.Printf("failed to find driver `%s` while querying bins\n", driverName)
 			// TODO: create custom error and set it for return
 			continue
 		}
 		bin.Driver = driver
-		cache.Bins[bin.Name] = bin
+		m.Bins[bin.Name] = bin
 	}
 
 	return nil

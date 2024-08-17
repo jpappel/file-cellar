@@ -9,15 +9,19 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var dbPools map[string]*sql.DB = make(map[string]*sql.DB)
-
 var SQLITE_DEFAULT_PRAGMAS = map[string]string{
 	"foreign_keys": "ON",
 	"journal_mode": "wal",
 	"synchronous":  "normal",
 }
 
-var logger = log.New(os.Stdout, "[DB]: ", log.LUTC|log.Ldate|log.Ltime)
+var dbPools map[string]dbPoolCounts
+var logger *log.Logger
+
+type dbPoolCounts struct {
+	Alive uint32
+	db    *sql.DB
+}
 
 // Sets pragmas for a database connection pool
 //
@@ -36,10 +40,10 @@ func setPragmas(db *sql.DB, pragmas map[string]string) error {
 
 // Gets a database connection pool, creating one if needed.
 // Only sets pragmas for the connection pool on creation.
-func GetPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
-	pool, ok := dbPools[connStr]
+func getPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
+	dbPool, ok := dbPools[connStr]
 	if ok {
-		return pool, nil
+		return dbPool.db, nil
 	}
 
 	pool, err := sql.Open("sqlite3", connStr)
@@ -56,18 +60,23 @@ func GetPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
 	}
 	logger.Printf("Succesfully set pragmas for %s\n", connStr)
 
-	dbPools[connStr] = pool
+	dbPools[connStr] = dbPoolCounts{Alive: 1, db: pool}
 	return pool, nil
 }
 
 // Close a database connection pool
-func ClosePool(connStr string) (bool, error) {
-	pool, ok := dbPools[connStr]
+func closePool(connStr string) (bool, error) {
+	dbPool, ok := dbPools[connStr]
 	if !ok {
 		return false, nil
 	}
 
-	err := pool.Close()
+	dbPool.Alive--
+	if dbPool.Alive != 0 {
+		return false, nil
+	}
+
+	err := dbPool.db.Close()
 	if err != nil {
 		logger.Printf("Failed to close connection %s\n%v", connStr, err)
 		return false, err
@@ -139,7 +148,7 @@ func InitTables(db *sql.DB) error {
 }
 
 func ExampleData(db *sql.DB) error {
-    // FIXME: make correct with database schema
+	// FIXME: make correct with database schema
 	_, err := db.Exec(`
 	INSERT INTO drivers(name)
 	VALUES
@@ -171,6 +180,11 @@ func ExampleData(db *sql.DB) error {
 	(2, 'dota2', '15c11ed3bd0eb92d6d54de44b36131643268e28f4aac9229f83231a0670c290c', 55e9, 'Dota2Beta', 1373370617)
 	`)
 	return err
+}
+
+func init() {
+	dbPools = make(map[string]dbPoolCounts)
+	logger = log.New(os.Stdout, "[DB]: ", log.LUTC|log.Ldate|log.Ltime)
 }
 
 // func SetServerTable(db *sql.DB, params map[string]string) error
