@@ -70,7 +70,7 @@ func (b Bin) Delete(id FileIdentifier) error {
 }
 
 func (b Bin) FileStatus(id FileIdentifier) (FileStatus, error) {
-    return b.Driver.Status(b.Path.Internal, id)
+	return b.Driver.Status(b.Path.Internal, id)
 }
 
 func (b Bin) Stats() Stats {

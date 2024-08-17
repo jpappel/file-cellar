@@ -20,7 +20,7 @@ func (m *Manager) Resolve(ctx context.Context, path string) (string, error) {
 	url := ""
 	err := row.Scan(&url)
 	if err == sql.ErrNoRows {
-        logger.Printf("no file with uri: %s\n", path)
+		logger.Printf("no file with uri: %s\n", path)
 		return "", err
 	}
 	if err != nil {
@@ -34,9 +34,9 @@ func (m *Manager) Resolve(ctx context.Context, path string) (string, error) {
 func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error) {
 	row := m.db.QueryRowContext(ctx, `
     SELECT files.name, files.hash, files.size, files.uploadTimestamp, bins.name
-	FROM files
+    FROM files
     INNER JOIN bins ON files.binID=bins.id
-	WHERE files.relPath=?
+    WHERE files.relPath=?
 	`, uri)
 
 	f := new(storage.File)
@@ -49,10 +49,10 @@ func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error
 	switch {
 	case err == sql.ErrNoRows:
 		logger.Printf("no file with uri %s\n", uri)
-		return f, err
+		return nil, err
 	case err != nil:
 		logger.Printf("failure when querying for file %s\n%v", uri, err)
-		return f, err
+		return nil, err
 	default:
 		f.UploadTimestamp = time.Unix(epochTime, 0)
 	}

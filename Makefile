@@ -1,6 +1,7 @@
-.PHONY: all build run tidy clean
+.PHONY: all build run test tidy clean
 
 DBS := testing.db
+PKGS := db server storage
 
 all: build
 
@@ -11,8 +12,11 @@ build:
 
 run: ./file-cellar
 
+test:
+	go test ./...
+
 clean: tidy
 	rm -rf ./file-cellar $(DBS)
-	
+
 tidy:
 	go mod tidy
