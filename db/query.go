@@ -18,14 +18,14 @@ func (m *Manager) Resolve(ctx context.Context, path string) (string, error) {
     WHERE relPath=?`, path)
 
 	url := ""
-	err := row.Err()
-	switch {
-	case err == sql.ErrNoRows:
-		logger.Printf("no file with uri%s\n", path)
-	case err != nil:
+	err := row.Scan(&url)
+	if err == sql.ErrNoRows {
+        logger.Printf("no file with uri: %s\n", path)
+		return "", err
+	}
+	if err != nil {
 		logger.Printf("failure when querying for file %s\n%v", path, err)
-	default:
-		row.Scan(&url)
+		return "", err
 	}
 
 	return url, err
