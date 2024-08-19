@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -10,6 +11,9 @@ type pathPair struct {
 	Internal string
 	External string
 }
+
+// TODO: use context to prematurely exit functions
+
 
 // A location for storing for files
 type Bin struct {
@@ -26,7 +30,7 @@ type Bin struct {
 // Get a file from a bin
 //
 // If Bin.Redirect is false returns an io.ReaderCloser, else returns a url for redirection
-func (b *Bin) Get(id FileIdentifier) (io.ReadCloser, string, error) {
+func (b *Bin) Get(ctx context.Context, id FileIdentifier) (io.ReadCloser, string, error) {
 	if b.Redirect {
 		redirectURL, err := url.JoinPath(b.Path.Internal, string(id))
 		if err != nil {
@@ -38,7 +42,7 @@ func (b *Bin) Get(id FileIdentifier) (io.ReadCloser, string, error) {
 		return nil, redirectURL, nil
 	}
 
-	rc, err := b.Driver.Get(b.Path.Internal, id)
+	rc, err := b.Driver.Get(ctx, b.Path.Internal, id)
 	if err != nil {
 		b.stats.Failed++
 	} else {
@@ -47,9 +51,8 @@ func (b *Bin) Get(id FileIdentifier) (io.ReadCloser, string, error) {
 	return rc, "", err
 }
 
-// TODO: implement
-func (b Bin) Upload(f *UploadFile) error {
-	err := b.Driver.Upload(b.Path.Internal, f)
+func (b Bin) Upload(ctx context.Context, f *UploadFile) error {
+	err := b.Driver.Upload(ctx, b.Path.Internal, f)
 	if err != nil {
 		b.stats.Failed++
 	} else {
@@ -58,9 +61,8 @@ func (b Bin) Upload(f *UploadFile) error {
 	return err
 }
 
-// TODO: implement
-func (b Bin) Delete(id FileIdentifier) error {
-	err := b.Driver.Delete(b.Path.Internal, id)
+func (b Bin) Delete(ctx context.Context, id FileIdentifier) error {
+	err := b.Driver.Delete(ctx, b.Path.Internal, id)
 	if err != nil {
 		b.stats.Failed++
 	} else {
@@ -69,8 +71,8 @@ func (b Bin) Delete(id FileIdentifier) error {
 	return err
 }
 
-func (b Bin) FileStatus(id FileIdentifier) (FileStatus, error) {
-	return b.Driver.Status(b.Path.Internal, id)
+func (b Bin) FileStatus(ctx context.Context, id FileIdentifier) (FileStatus, error) {
+	return b.Driver.Status(ctx, b.Path.Internal, id)
 }
 
 func (b Bin) Stats() Stats {
@@ -78,6 +80,5 @@ func (b Bin) Stats() Stats {
 }
 
 func (b Bin) String() string {
-	// TODO: update with more relavent fields
 	return fmt.Sprintf("Bin %s [%v]:%s", b.Name, b.Driver, b.Path.Internal)
 }

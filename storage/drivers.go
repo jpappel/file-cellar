@@ -1,49 +1,25 @@
 package storage
 
 import (
+	"context"
 	"io"
 )
 
 var registeredDrivers []Driver
 
 type Driver interface {
-	Get(baseUrl string, id FileIdentifier) (io.ReadCloser, error)
-	Upload(baseUrl string, f *UploadFile) error
-	Delete(baseUrl string, id FileIdentifier) error
-	Status(baseUrl string, id FileIdentifier) (FileStatus, error)
+	Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadCloser, error)
+	Upload(ctx context.Context, baseUrl string, f *UploadFile) error
+	Delete(ctx context.Context, baseUrl string, id FileIdentifier) error
+	Status(ctx context.Context, baseUrl string, id FileIdentifier) (FileStatus, error)
 	Stats() Stats
-	String() string
-	BaseDriverI
-}
-
-type BaseDriverI interface {
 	SetName(string)
 	SetId(int64)
 	Name() string
 	Id() int64
+	String() string
 }
 
-type BaseDriver struct {
-	name string
-	id   int64
-}
-
-func (d *BaseDriver) Name() string {
-	return d.name
-}
-
-func (d *BaseDriver) SetName(name string) {
-	d.name = name
-}
-
-func (d *BaseDriver) Id() int64 {
-	return d.id
-}
-
-func (d *BaseDriver) SetId(id int64) {
-	d.id = id
-}
-
-func Drivers() []Driver {
+func ListDrivers() []Driver {
 	return registeredDrivers
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,8 @@ import (
 type LocalDriver struct {
 	knownRoots map[string]bool
 	stats      Stats
-	BaseDriver
+	id         int64
+	name       string
 }
 
 func NewLocalDriver() *LocalDriver {
@@ -52,7 +54,7 @@ func (d *LocalDriver) addRoot(root string) {
 	d.knownRoots[root] = true
 }
 
-func (d *LocalDriver) Get(baseUrl string, id FileIdentifier) (io.ReadCloser, error) {
+func (d *LocalDriver) Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadCloser, error) {
 	path := filepath.Join(baseUrl, string(id))
 	f, err := os.Open(path)
 	if err != nil {
@@ -65,7 +67,7 @@ func (d *LocalDriver) Get(baseUrl string, id FileIdentifier) (io.ReadCloser, err
 	return f, err
 }
 
-func (d *LocalDriver) Upload(baseUrl string, f *UploadFile) error {
+func (d *LocalDriver) Upload(ctx context.Context, baseUrl string, f *UploadFile) error {
 	ok, err := d.rootKnown(baseUrl)
 	if !ok {
 		d.stats.Failed++
@@ -105,7 +107,7 @@ func (d *LocalDriver) Upload(baseUrl string, f *UploadFile) error {
 	return nil
 }
 
-func (d *LocalDriver) Delete(baseUrl string, id FileIdentifier) error {
+func (d *LocalDriver) Delete(ctx context.Context, baseUrl string, id FileIdentifier) error {
 	ok, err := d.rootKnown(baseUrl)
 	if !ok {
 		d.stats.Failed++
@@ -122,7 +124,7 @@ func (d *LocalDriver) Delete(baseUrl string, id FileIdentifier) error {
 	return err
 }
 
-func (d *LocalDriver) Status(baseUrl string, id FileIdentifier) (FileStatus, error) {
+func (d *LocalDriver) Status(ctx context.Context, baseUrl string, id FileIdentifier) (FileStatus, error) {
 	ok, err := d.rootKnown(baseUrl)
 	if !ok {
 		return FileUnknownError, err
@@ -131,13 +133,14 @@ func (d *LocalDriver) Status(baseUrl string, id FileIdentifier) (FileStatus, err
 	info, err := os.Stat(filepath.Join(baseUrl, string(id)))
 	if err != nil {
 		log.Printf("Driver: %s: failed to get status: %v\n", id, err)
-		return FileUnreadable, err
+		return FileMissing, err
 	}
 
 	mode := info.Mode()
 	if !mode.IsRegular() {
 		return FileUnreadable, errors.New("incorrect file mode, expected regular file")
 	}
+	// FIXME: use more relavent check for permissions
 	if mode&0444 == 0 {
 		return FileUnknownError, errors.New("incorrect file permissions, expected read access")
 	}
@@ -147,6 +150,22 @@ func (d *LocalDriver) Status(baseUrl string, id FileIdentifier) (FileStatus, err
 
 func (d *LocalDriver) Stats() Stats {
 	return d.stats
+}
+
+func (d *LocalDriver) Name() string {
+	return d.name
+}
+
+func (d *LocalDriver) SetName(name string) {
+	d.name = name
+}
+
+func (d *LocalDriver) Id() int64 {
+	return d.id
+}
+
+func (d *LocalDriver) SetId(id int64) {
+	d.id = id
 }
 
 func (d *LocalDriver) String() string {
