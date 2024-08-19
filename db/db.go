@@ -61,7 +61,7 @@ func getPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
 	}
 	logger.Printf("Succesfully set pragmas for %s\n", connStr)
 
-    if connStr != ":memory:" {
+	if connStr != ":memory:" {
 		dbPools[connStr] = dbPoolCounts{Alive: 1, db: pool}
 	}
 	return pool, nil

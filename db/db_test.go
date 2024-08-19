@@ -77,7 +77,7 @@ func sampleData(m *Manager) error {
 	bin.Path.Internal = "/mount/slow"
 	bin.Redirect = false
 	bin.Driver = localDriver
-	m.Bins[bin.Name] = bin
+	m.Bins[1] = bin
 
 	bin = new(storage.Bin)
 	bin.Id = 2
@@ -86,7 +86,7 @@ func sampleData(m *Manager) error {
 	bin.Path.Internal = "/mount/zyoom"
 	bin.Redirect = false
 	bin.Driver = localDriver
-	m.Bins["fast ssd"] = bin
+	m.Bins[2] = bin
 
 	bin = new(storage.Bin)
 	bin.Id = 3
@@ -95,7 +95,7 @@ func sampleData(m *Manager) error {
 	bin.Path.Internal = "https://myhomenas.local"
 	bin.Redirect = true
 	bin.Driver = networkDriver
-	m.Bins["home NAS"] = bin
+	m.Bins[3] = bin
 
 	return err
 }
@@ -213,7 +213,7 @@ func TestGetFile(t *testing.T) {
 		Hash:            "af8182a217f6c4ae4abb6d52951f6e7a2cac3a4d59889e4a7a3cce87ac0ae508",
 		Size:            6e8,
 		RelPath:         "oldvid.mp4",
-		Bin:             m.Bins["slow hard drive"],
+		Bin:             m.Bins[1],
 		UploadTimestamp: time.Unix(1000209017, 0),
 	}
 	testGoodCase(expected, "oldvid.mp4")
@@ -224,7 +224,7 @@ func TestGetFile(t *testing.T) {
 		Size:            3.072e4,
 		RelPath:         "WeddingAltar5.jpg",
 		UploadTimestamp: time.Unix(451309817, 0),
-		Bin:             m.Bins["slow hard drive"],
+		Bin:             m.Bins[1],
 	}
 	testGoodCase(expected, "WeddingAltar5.jpg")
 
@@ -234,7 +234,7 @@ func TestGetFile(t *testing.T) {
 		Size:            55e9,
 		RelPath:         "Dota2Beta",
 		UploadTimestamp: time.Unix(1373370617, 0),
-		Bin:             m.Bins["fast ssd"],
+		Bin:             m.Bins[2],
 	}
 	testGoodCase(expected, "Dota2Beta")
 
@@ -244,7 +244,7 @@ func TestGetFile(t *testing.T) {
 		Size:            1.9e9,
 		RelPath:         "I_Saw_The_TV_Glow_2024.mp4",
 		UploadTimestamp: time.Unix(1718538617, 0),
-		Bin:             m.Bins["home NAS"],
+		Bin:             m.Bins[3],
 	}
 	testGoodCase(expected, "I_Saw_The_TV_Glow_2024.mp4")
 

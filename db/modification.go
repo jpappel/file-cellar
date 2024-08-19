@@ -43,9 +43,13 @@ func (m *Manager) AddBin(ctx context.Context, bin *storage.Bin, driverID int64) 
 		logger.Print(err)
 	}
 
-	m.Bins[bin.Name] = bin
+	id, err := result.LastInsertId()
+	if err != nil {
+		logger.Print(err)
+	}
+	m.Bins[id] = bin
 
-	return result.LastInsertId()
+	return id, nil
 }
 
 // Assigns a relative path to a file

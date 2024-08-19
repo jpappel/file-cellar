@@ -14,7 +14,6 @@ type pathPair struct {
 
 // TODO: use context to prematurely exit functions
 
-
 // A location for storing for files
 type Bin struct {
 	Id           int64

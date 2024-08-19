@@ -33,9 +33,8 @@ func (m *Manager) Resolve(ctx context.Context, path string) (string, error) {
 
 func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error) {
 	row := m.db.QueryRowContext(ctx, `
-    SELECT files.name, files.hash, files.size, files.uploadTimestamp, bins.name
+    SELECT binID, name, hash, size, uploadTimestamp
     FROM files
-    INNER JOIN bins ON files.binID=bins.id
     WHERE files.relPath=?
 	`, uri)
 
@@ -43,8 +42,8 @@ func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error
 
 	f.RelPath = uri
 	var epochTime int64
-	var binName string
-	err := row.Scan(&f.Name, &f.Hash, &f.Size, &epochTime, &binName)
+	var binId int64
+	err := row.Scan(&binId, &f.Name, &f.Hash, &f.Size, &epochTime)
 
 	switch {
 	case err == sql.ErrNoRows:
@@ -57,9 +56,9 @@ func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error
 		f.UploadTimestamp = time.Unix(epochTime, 0)
 	}
 
-	bin, ok := m.Bins[binName]
+	bin, ok := m.Bins[binId]
 	if !ok {
-		bin, err = m.GetBin(ctx, binName)
+		bin, err = m.GetBin(ctx, binId)
 		if err != nil {
 			return nil, err
 		}
@@ -69,22 +68,23 @@ func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error
 	return f, nil
 }
 
-func (m *Manager) GetBin(ctx context.Context, binName string) (*storage.Bin, error) {
-	bin, ok := m.Bins[binName]
+func (m *Manager) GetBin(ctx context.Context, id int64) (*storage.Bin, error) {
+	bin, ok := m.Bins[id]
 	if ok {
 		return bin, nil
 	} else {
 		bin = new(storage.Bin)
+		bin.Id = id
 	}
 
 	row := m.db.QueryRowContext(ctx, `
-    SELECT bins.id, bins.name, bins.externalURL, bins.internalURL, bins.redirect, drivers.name
+    SELECT bins.name, bins.externalURL, bins.internalURL, bins.redirect, drivers.name
     FROM bins
     INNER JOIN drivers ON bins.driverID=drivers.id
-    WHERE bins.name=?`, binName)
+    WHERE bins.id=?`, id)
 
 	var driverName string
-	err := row.Scan(&bin.Id, &bin.Name, &bin.Path.External, &bin.Path.Internal, &bin.Redirect, &driverName)
+	err := row.Scan(&bin.Name, &bin.Path.External, &bin.Path.Internal, &bin.Redirect, &driverName)
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +95,14 @@ func (m *Manager) GetBin(ctx context.Context, binName string) (*storage.Bin, err
 	}
 
 	bin.Driver = driver
-	m.Bins[binName] = bin
+	m.Bins[id] = bin
 
 	return bin, nil
 }
 
+// Clear a managers bins and recreates them according to the database
 func (m *Manager) GetBins(ctx context.Context) error {
-	m.Bins = make(map[string]*storage.Bin)
+	m.Bins = make(map[int64]*storage.Bin)
 	rows, err := m.db.QueryContext(ctx, `
     SELECT bins.id, bins.name, bins.internalURL, bins.externalURL, bins.redirect, drivers.name
     FROM bins
@@ -114,8 +115,9 @@ func (m *Manager) GetBins(ctx context.Context) error {
 
 	for rows.Next() {
 		bin := new(storage.Bin)
+		var id int64
 		var driverName string
-		err = rows.Scan(&bin.Name, &bin.Path.Internal, &bin.Path.External, &bin.Redirect, &driverName)
+		err = rows.Scan(&id, &bin.Name, &bin.Path.Internal, &bin.Path.External, &bin.Redirect, &driverName)
 
 		if err != nil {
 			logger.Printf("failed to read from database\n")
@@ -129,7 +131,7 @@ func (m *Manager) GetBins(ctx context.Context) error {
 			continue
 		}
 		bin.Driver = driver
-		m.Bins[bin.Name] = bin
+		m.Bins[id] = bin
 	}
 
 	return nil

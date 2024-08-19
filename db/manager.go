@@ -8,7 +8,7 @@ import (
 type Manager struct {
 	db      *sql.DB
 	connStr string
-	Bins    map[string]*storage.Bin
+	Bins    map[int64]*storage.Bin
 	Drivers map[string]storage.Driver
 }
 
@@ -18,7 +18,7 @@ type Manager struct {
 func GetManager(connStr string, pragmas map[string]string) (*Manager, error) {
 	m := new(Manager)
 	m.connStr = connStr
-	m.Bins = make(map[string]*storage.Bin)
+	m.Bins = make(map[int64]*storage.Bin)
 	m.Drivers = make(map[string]storage.Driver)
 
 	db, err := getPool(connStr, pragmas)
