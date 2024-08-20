@@ -19,7 +19,7 @@ type Bin struct {
 	Id           int64
 	Name         string // bin name
 	Path         pathPair
-	OpenFiles    map[FileIdentifier]io.ReadCloser // files currently opened by this bin
+	OpenFiles    map[FileIdentifier]io.ReadCloser // files currently opened by this bin TODO: remove or add use
 	Driver       Driver
 	Redirect     bool              // if bin should Redirect or Download when getting a file
 	DriverParams map[string]string // Params to be passed to the storage driver
@@ -50,7 +50,7 @@ func (b *Bin) Get(ctx context.Context, id FileIdentifier) (io.ReadCloser, string
 	return rc, "", err
 }
 
-func (b Bin) Upload(ctx context.Context, f *UploadFile) error {
+func (b Bin) Upload(ctx context.Context, f *File) error {
 	err := b.Driver.Upload(ctx, b.Path.Internal, f)
 	if err != nil {
 		b.stats.Failed++

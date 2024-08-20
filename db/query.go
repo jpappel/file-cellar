@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"file-cellar/storage"
+	"fmt"
 	"time"
 )
 
@@ -31,14 +32,14 @@ func (m *Manager) Resolve(ctx context.Context, path string) (string, error) {
 	return url, err
 }
 
-func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.File, error) {
+func (m *Manager) GetFile(ctx context.Context, uri string) (*storage.FileInfo, error) {
 	row := m.db.QueryRowContext(ctx, `
     SELECT binID, name, hash, size, uploadTimestamp
     FROM files
     WHERE files.relPath=?
 	`, uri)
 
-	f := new(storage.File)
+	f := new(storage.FileInfo)
 
 	f.RelPath = uri
 	var epochTime int64
@@ -72,10 +73,9 @@ func (m *Manager) GetBin(ctx context.Context, id int64) (*storage.Bin, error) {
 	bin, ok := m.Bins[id]
 	if ok {
 		return bin, nil
-	} else {
-		bin = new(storage.Bin)
-		bin.Id = id
 	}
+	bin = new(storage.Bin)
+	bin.Id = id
 
 	row := m.db.QueryRowContext(ctx, `
     SELECT bins.name, bins.externalURL, bins.internalURL, bins.redirect, drivers.name
@@ -86,18 +86,48 @@ func (m *Manager) GetBin(ctx context.Context, id int64) (*storage.Bin, error) {
 	var driverName string
 	err := row.Scan(&bin.Name, &bin.Path.External, &bin.Path.Internal, &bin.Redirect, &driverName)
 	if err != nil {
+		fmt.Println("error after scan: ", err)
 		return nil, err
 	}
 
 	driver, ok := m.Drivers[driverName]
 	if !ok {
-		return nil, errors.New("can't find driver")
+		driver, err = m.GetDriver(ctx, driverName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	bin.Driver = driver
 	m.Bins[id] = bin
 
 	return bin, nil
+}
+
+func (m *Manager) GetDriver(ctx context.Context, driverName string) (storage.Driver, error) {
+	row := m.db.QueryRowContext(ctx, `
+    SELECT id
+    FROM drivers
+    WHERE name=?
+    `, driverName)
+
+	var id int64
+	err := row.Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+
+	var driver storage.Driver
+
+	switch driverName {
+	case "LocalDriver":
+		driver = storage.NewLocalDriver()
+		driver.SetId(id)
+	default:
+		return nil, errors.New("unknown driver")
+	}
+
+	return driver, nil
 }
 
 // Clear a managers bins and recreates them according to the database

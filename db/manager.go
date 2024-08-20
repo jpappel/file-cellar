@@ -16,10 +16,11 @@ type Manager struct {
 //
 // Don't worry, using this function doesn't make you a Karen ;)
 func GetManager(connStr string, pragmas map[string]string) (*Manager, error) {
-	m := new(Manager)
-	m.connStr = connStr
-	m.Bins = make(map[int64]*storage.Bin)
-	m.Drivers = make(map[string]storage.Driver)
+	m := &Manager{
+		connStr: connStr,
+		Bins:    make(map[int64]*storage.Bin),
+		Drivers: make(map[string]storage.Driver),
+	}
 
 	db, err := getPool(connStr, pragmas)
 	if err != nil {
@@ -29,6 +30,11 @@ func GetManager(connStr string, pragmas map[string]string) (*Manager, error) {
 	m.db = db
 
 	return m, nil
+}
+
+func (m *Manager) Init() error {
+    // TODO: add field to avoid reinitialzing tables
+    return InitTables(m.db)
 }
 
 // Closes a manager's connection to the database connection pool.

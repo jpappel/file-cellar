@@ -54,8 +54,7 @@ func getPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
 	}
 	logger.Printf("Created sqlite3 connnection pool: %s", connStr)
 
-	err = setPragmas(pool, pragmas)
-	if err != nil {
+	if err = setPragmas(pool, pragmas); err != nil {
 		logger.Printf("Failed to set pragmas for %s", connStr)
 		return nil, err
 	}

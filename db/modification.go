@@ -2,11 +2,7 @@ package db
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"file-cellar/storage"
-	"fmt"
-	"strings"
 )
 
 // registers a storage driver
@@ -33,7 +29,7 @@ func (m *Manager) AddDriver(ctx context.Context, d storage.Driver) bool {
 	return true
 }
 
-// adds a storage bin to the database and returns its index
+// adds a storage bin to the database and returns its assigned id
 func (m *Manager) AddBin(ctx context.Context, bin *storage.Bin, driverID int64) (int64, error) {
 	result, err := m.db.ExecContext(ctx,
 		`INSERT INTO bins (driverID, name, externalURL, internalURL, redirect)
@@ -47,23 +43,18 @@ func (m *Manager) AddBin(ctx context.Context, bin *storage.Bin, driverID int64) 
 	if err != nil {
 		logger.Print(err)
 	}
+	bin.Id = id
 	m.Bins[id] = bin
 
 	return id, nil
 }
 
 // Assigns a relative path to a file
-func (m *Manager) AddFile(ctx context.Context, f *storage.File) error {
-	unixTime := f.UploadTimestamp.Unix()
-
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%s%d", f.Name, f.Hash, unixTime)))
-	encoding := base64.URLEncoding.EncodeToString(hash[:])
-	f.RelPath = strings.Trim(encoding, "=")
-
+func (m *Manager) AddFile(ctx context.Context, f *storage.FileInfo) error {
 	_, err := m.db.ExecContext(ctx, `
     INSERT INTO files (binID, name, hash, size, relPath, uploadTimestamp)
     VALUES (?,?,?,?,?,?)`,
-		f.Bin.Id, f.Name, f.Hash, f.Size, f.RelPath, unixTime)
+		f.Bin.Id, f.Name, f.Hash, f.Size, f.RelPath, f.UploadTimestamp)
 
 	if err != nil {
 		logger.Print(err)

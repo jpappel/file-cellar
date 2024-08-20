@@ -1,55 +1,50 @@
 package main
 
 import (
+	"context"
+	"file-cellar/config"
 	"file-cellar/db"
+	"file-cellar/server"
+	"file-cellar/storage"
+	"fmt"
 	"log"
+	"net/http"
 )
 
 func main() {
-	const connStr = "./testing.db"
-	pool, err := db.GetPool(connStr, db.SQLITE_DEFAULT_PRAGMAS)
-	if err != nil {
-		log.Fatal("Failed to get database connection", err)
-	}
-	defer db.ClosePool(connStr)
 
-	err = db.InitTables(pool)
+	ctx := context.Background()
+	manager, err := db.GetManager(config.Server["DBURL"], config.DB_PRAGMAS)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicf("Unable to get manager: %v\n", err)
 	}
+	defer manager.Close()
 
-	err = db.ExampleData(pool)
+	err = manager.Init()
 	if err != nil {
-		log.Fatal(err)
+		log.Panicf("Failed to initialize tables: %v\n", err)
 	}
 
-	// f, err := db.GetFile(pool, ctx, "oldvid.mp4")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Printf("file: %v\n", f)
+	localDriver := storage.NewLocalDriver()
+	if !manager.AddDriver(ctx, localDriver) {
+		log.Panicf("Failed to register local driver: %v\n", err)
+	}
 
-	// uri := "I_Saw_The_TV_Glow_2024.mp4"
-	// url, err := db.ResolveURI(pool, ctx, uri)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Printf("Expanded %s to %s\n", uri, url)
+	bin := &storage.Bin{
+		Name:     "testing bin",
+		Driver:   localDriver,
+		Redirect: false,
+	}
+	bin.Path.External = "foobar"
+	bin.Path.Internal = "./testing/files"
 
-	// newFile := shared.File{
-	// 	BinId:           1,
-	// 	Name:            "angry goose profile pic",
-	// 	Hash:            "5f04192ad733bed11e6e391f9db836762015406209e3084846ff298f6a2fe7b4",
-	// 	UploadTimestamp: time.Now().In(time.UTC),
-	// }
-	//
-	//    db.CreateFile(pool, ctx, &newFile)
-	//    if err != nil {
-	//        log.Fatal(err)
-	//    }
+	_, err = manager.AddBin(ctx, bin, bin.Driver.Id())
+	if err != nil {
+		log.Panicf("Error adding bin: %v\n", err)
+	}
 
-	// const PORT uint = 8080
-	// mux := GetMux()
-	// log.Printf("Listening on %d\n", PORT)
-	// http.ListenAndServe(":"+fmt.Sprint(PORT), mux)
+	const PORT uint = 8080
+	mux := server.GetMux()
+	log.Printf("Listening on %d\n", PORT)
+	http.ListenAndServe(":"+fmt.Sprint(PORT), mux)
 }

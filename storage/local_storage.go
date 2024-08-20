@@ -32,8 +32,7 @@ func createLocal(path string) string {
 		log.Fatal("Failed to get root directory\n", err)
 	}
 
-	err = os.MkdirAll(absPath, 0755)
-	if err != nil {
+	if err = os.MkdirAll(absPath, 0755); err != nil {
 		log.Fatal(err)
 	}
 
@@ -41,6 +40,7 @@ func createLocal(path string) string {
 }
 
 func (d *LocalDriver) rootKnown(baseUrl string) (bool, error) {
+	// FIXME: add known roots to driver
 	_, ok := d.knownRoots[baseUrl]
 	var err error = nil
 	if !ok {
@@ -67,12 +67,12 @@ func (d *LocalDriver) Get(ctx context.Context, baseUrl string, id FileIdentifier
 	return f, err
 }
 
-func (d *LocalDriver) Upload(ctx context.Context, baseUrl string, f *UploadFile) error {
-	ok, err := d.rootKnown(baseUrl)
-	if !ok {
-		d.stats.Failed++
-		return err
-	}
+func (d *LocalDriver) Upload(ctx context.Context, baseUrl string, f *File) error {
+	// ok, err := d.rootKnown(baseUrl)
+	// if !ok {
+	// 	d.stats.Failed++
+	// 	return err
+	// }
 
 	path := filepath.Join(baseUrl, f.RelPath)
 
@@ -83,7 +83,7 @@ func (d *LocalDriver) Upload(ctx context.Context, baseUrl string, f *UploadFile)
 		return err
 	}
 
-	n, err := io.Copy(w, *f.Resource)
+	n, err := io.Copy(w, f.Data)
 	if err != nil {
 		d.stats.Failed++
 		log.Printf("Driver: Failed to write file %s: %v\n", f.RelPath, err)
@@ -115,8 +115,8 @@ func (d *LocalDriver) Delete(ctx context.Context, baseUrl string, id FileIdentif
 	}
 
 	path := filepath.Join(baseUrl, string(id))
-	err = os.Remove(path)
-	if err != nil {
+
+	if err = os.Remove(path); err != nil {
 		d.stats.Failed++
 	} else {
 		d.stats.Deleted++

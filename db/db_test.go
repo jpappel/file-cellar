@@ -18,8 +18,7 @@ func newTestManager() (*Manager, error) {
 		return nil, err
 	}
 
-	err = InitTables(m.db)
-	if err != nil {
+	if err = InitTables(m.db); err != nil {
 		return nil, err
 	}
 
@@ -165,7 +164,7 @@ func TestGetFile(t *testing.T) {
 
 	ctx := context.Background()
 
-	testGoodCase := func(expected storage.File, uri string) {
+	testGoodCase := func(expected storage.FileInfo, uri string) {
 		f, err := m.GetFile(ctx, uri)
 		if err != nil {
 			t.Errorf("Failed to get file %s: %v", uri, err)
@@ -208,7 +207,7 @@ func TestGetFile(t *testing.T) {
 	}
 
 	t.Log("Testing Existing Files")
-	expected := storage.File{
+	expected := storage.FileInfo{
 		Name:            "sentimental video",
 		Hash:            "af8182a217f6c4ae4abb6d52951f6e7a2cac3a4d59889e4a7a3cce87ac0ae508",
 		Size:            6e8,
@@ -218,7 +217,7 @@ func TestGetFile(t *testing.T) {
 	}
 	testGoodCase(expected, "oldvid.mp4")
 
-	expected = storage.File{
+	expected = storage.FileInfo{
 		Name:            "marriage photo",
 		Hash:            "a0856e75fc1f1ec0d2fed17d534fbc1756770dbb0cc83788cbf8ca861c885fc0",
 		Size:            3.072e4,
@@ -228,7 +227,7 @@ func TestGetFile(t *testing.T) {
 	}
 	testGoodCase(expected, "WeddingAltar5.jpg")
 
-	expected = storage.File{
+	expected = storage.FileInfo{
 		Name:            "dota2",
 		Hash:            "15c11ed3bd0eb92d6d54de44b36131643268e28f4aac9229f83231a0670c290c",
 		Size:            55e9,
@@ -238,7 +237,7 @@ func TestGetFile(t *testing.T) {
 	}
 	testGoodCase(expected, "Dota2Beta")
 
-	expected = storage.File{
+	expected = storage.FileInfo{
 		Name:            "I saw the tv glow",
 		Hash:            "7b1a56dfcba8ce808cb6392e2403f895afb1f210b85b7d3ad324d365432f01fa",
 		Size:            1.9e9,

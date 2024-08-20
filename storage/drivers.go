@@ -9,7 +9,7 @@ var registeredDrivers []Driver
 
 type Driver interface {
 	Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadCloser, error)
-	Upload(ctx context.Context, baseUrl string, f *UploadFile) error
+	Upload(ctx context.Context, baseUrl string, f *File) error
 	Delete(ctx context.Context, baseUrl string, id FileIdentifier) error
 	Status(ctx context.Context, baseUrl string, id FileIdentifier) (FileStatus, error)
 	Stats() Stats
