@@ -5,6 +5,8 @@ import (
 	"file-cellar/storage"
 )
 
+var Managers map[string]*Manager
+
 type Manager struct {
 	db      *sql.DB
 	connStr string
@@ -16,6 +18,12 @@ type Manager struct {
 //
 // Don't worry, using this function doesn't make you a Karen ;)
 func GetManager(connStr string, pragmas map[string]string) (*Manager, error) {
+	if connStr != ":memory:" {
+		if m, ok := Managers[connStr]; ok {
+			return m, nil
+		}
+	}
+
 	m := &Manager{
 		connStr: connStr,
 		Bins:    make(map[int64]*storage.Bin),
@@ -28,17 +36,27 @@ func GetManager(connStr string, pragmas map[string]string) (*Manager, error) {
 	}
 
 	m.db = db
+	Managers[connStr] = m
 
 	return m, nil
 }
 
 func (m *Manager) Init() error {
-    // TODO: add field to avoid reinitialzing tables
-    return InitTables(m.db)
+	// TODO: add field to avoid reinitialzing tables
+	return InitTables(m.db)
 }
 
-// Closes a manager's connection to the database connection pool.
-func (m *Manager) Close() {
-	closePool(m.connStr)
+// Closes a manager's database connection
+func (m *Manager) Close() error {
+	if err := m.db.Close(); err != nil {
+		logger.Printf("Failed to close connection: %s\n%v", m.connStr, err)
+		return err
+	}
 	m.db = nil
+
+	return nil
+}
+
+func init() {
+	Managers = make(map[string]*Manager)
 }

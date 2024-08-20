@@ -15,7 +15,6 @@ var SQLITE_DEFAULT_PRAGMAS = map[string]string{
 	"synchronous":  "normal",
 }
 
-var dbPools map[string]dbPoolCounts
 var logger *log.Logger
 
 type dbPoolCounts struct {
@@ -38,15 +37,9 @@ func setPragmas(db *sql.DB, pragmas map[string]string) error {
 	return nil
 }
 
-// Gets a database connection pool, creating one if needed.
+// Gets a database connection pool
 // Only sets pragmas for the connection pool on creation.
 func getPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
-	dbPool, ok := dbPools[connStr]
-	if ok {
-		dbPool.Alive++
-		return dbPool.db, nil
-	}
-
 	pool, err := sql.Open("sqlite3", connStr)
 	if err != nil {
 		logger.Printf("Failed to open sqlite3 connection to %s", connStr)
@@ -60,34 +53,7 @@ func getPool(connStr string, pragmas map[string]string) (*sql.DB, error) {
 	}
 	logger.Printf("Succesfully set pragmas for %s\n", connStr)
 
-	if connStr != ":memory:" {
-		dbPools[connStr] = dbPoolCounts{Alive: 1, db: pool}
-	}
 	return pool, nil
-}
-
-// Close a database connection pool
-func closePool(connStr string) (bool, error) {
-	dbPool, ok := dbPools[connStr]
-	if !ok {
-		return false, nil
-	}
-
-	if connStr != ":memory:" {
-		dbPool.Alive--
-		if dbPool.Alive != 0 {
-			return false, nil
-		}
-	}
-
-	err := dbPool.db.Close()
-	if err != nil {
-		logger.Printf("Failed to close connection %s\n%v", connStr, err)
-		return false, err
-	}
-
-	logger.Printf("Closed sqlite3 connection to %s\n", connStr)
-	return true, nil
 }
 
 // Initializes tables in a database and sets indexes
@@ -156,9 +122,5 @@ func InitTables(db *sql.DB) error {
 }
 
 func init() {
-	dbPools = make(map[string]dbPoolCounts)
 	logger = log.New(os.Stdout, "[DB]: ", log.LUTC|log.Ldate|log.Ltime)
 }
-
-// func SetServerTable(db *sql.DB, params map[string]string) error
-// func GetServerTable(db *sql.DB) (map[string]string, error)

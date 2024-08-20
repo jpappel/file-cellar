@@ -53,7 +53,7 @@ func (fs FileStatus) String() string {
 func GetRelPath(fileName string, fileHash string, uploadTime time.Time) (string, error) {
 
 	if fileName == "" || fileHash == "" {
-		return "", errors.New("missing name or hash in FileInfo")
+		return "", errors.New("missing file name or file hash")
 	}
 
 	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%s%d", fileName, fileHash, uploadTime.Unix())))
