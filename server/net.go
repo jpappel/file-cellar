@@ -57,5 +57,5 @@ func initMux(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ping", ping)
 	mux.HandleFunc("POST /ft", determineFT)
 	mux.HandleFunc("POST /upload", upload)
-	mux.HandleFunc("GET /f", download)
+	mux.HandleFunc("GET /f/{filePath...}", download)
 }

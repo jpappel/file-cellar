@@ -8,7 +8,7 @@ import (
 var registeredDrivers []Driver
 
 type Driver interface {
-	Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadCloser, error)
+	Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadSeekCloser, error)
 	Upload(ctx context.Context, baseUrl string, f *File) error
 	Delete(ctx context.Context, baseUrl string, id FileIdentifier) error
 	Status(ctx context.Context, baseUrl string, id FileIdentifier) (FileStatus, error)

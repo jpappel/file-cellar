@@ -54,7 +54,7 @@ func (d *LocalDriver) addRoot(root string) {
 	d.knownRoots[root] = true
 }
 
-func (d *LocalDriver) Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadCloser, error) {
+func (d *LocalDriver) Get(ctx context.Context, baseUrl string, id FileIdentifier) (io.ReadSeekCloser, error) {
 	path := filepath.Join(baseUrl, string(id))
 	f, err := os.Open(path)
 	if err != nil {

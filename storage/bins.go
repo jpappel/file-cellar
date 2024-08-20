@@ -29,7 +29,7 @@ type Bin struct {
 // Get a file from a bin
 //
 // If Bin.Redirect is false returns an io.ReaderCloser, else returns a url for redirection
-func (b *Bin) Get(ctx context.Context, id FileIdentifier) (io.ReadCloser, string, error) {
+func (b *Bin) Get(ctx context.Context, id FileIdentifier) (io.ReadSeekCloser, string, error) {
 	if b.Redirect {
 		redirectURL, err := url.JoinPath(b.Path.Internal, string(id))
 		if err != nil {
@@ -41,13 +41,13 @@ func (b *Bin) Get(ctx context.Context, id FileIdentifier) (io.ReadCloser, string
 		return nil, redirectURL, nil
 	}
 
-	rc, err := b.Driver.Get(ctx, b.Path.Internal, id)
+	f, err := b.Driver.Get(ctx, b.Path.Internal, id)
 	if err != nil {
 		b.stats.Failed++
 	} else {
 		b.stats.Downloaded++
 	}
-	return rc, "", err
+	return f, "", err
 }
 
 func (b Bin) Upload(ctx context.Context, f *File) error {
